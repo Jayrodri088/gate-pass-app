@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 
+import 'package:gate_pass/welcome_screen.dart';
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -30,10 +32,10 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     _controller.forward();
 
     // Set a timer to navigate to the next screen after the animation completes
-    Timer(const Duration(seconds: 4), () {
+    Timer(const Duration(seconds: 6), () {
       // Navigate to the next screen after fade-out animation
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => NextScreen()), // Replace with your actual next screen
+        MaterialPageRoute(builder: (context) => const WelcomeScreen()), // Replace with your actual next screen
       );
     });
   }
@@ -63,13 +65,15 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 }
 
-class NextScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text('Next Screen'), // Replace with your actual next screen content
-      ),
-    );
-  }
-}
+// class NextScreen extends StatelessWidget {
+//   const NextScreen({super.key});
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return const Scaffold(
+//       body: Center(
+//         child: Text('Next Screen'), // Replace with your actual next screen content
+//       ),
+//     );
+//   }
+// }
