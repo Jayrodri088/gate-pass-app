@@ -80,6 +80,8 @@ flutter:
     - assets/setting.png
     - assets/time.png
     - assets/user-edit.png
+    - assets/id.png
+    - assets/selfie.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

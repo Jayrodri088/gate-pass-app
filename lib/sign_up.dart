@@ -278,7 +278,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     child: ElevatedButton(
                       onPressed: _isChecked
                           ? () {
-                              // TODO: Handle sign up action
+                              
                             }
                           : null,
                       style: ElevatedButton.styleFrom(
