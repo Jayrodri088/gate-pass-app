@@ -68,6 +68,18 @@ flutter:
     - assets/skip_icon.png
     - assets/next_icon.png
     - assets/back_icon.png
+    - assets/accept.png
+    - assets/cancel.png
+    - assets/entry.png
+    - assets/history.png
+    - assets/home_icon.png
+    - assets/img_1.png
+    - assets/img_2.png
+    - assets/img_3.png
+    - assets/notification.png
+    - assets/setting.png
+    - assets/time.png
+    - assets/user-edit.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

@@ -97,7 +97,7 @@ class OnboardingScreen2 extends StatelessWidget {
                       MaterialPageRoute(
                         builder: (context) => const SignUpScreen(),
                       ),
-                      );
+                    );
                   },
                   icon: Image.asset(
                     'assets/next_icon.png', // Replace with your actual icon path

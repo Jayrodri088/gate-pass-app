@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gate_pass/onboarding_screen.dart';
+import 'package:gate_pass/sign_in.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -80,7 +81,26 @@ class WelcomeScreen extends StatelessWidget {
               width: double.infinity,
               child: OutlinedButton(
                 onPressed: () {
-                  // TODO: Add Sign In action
+                  Navigator.of(context).push(
+                    PageRouteBuilder(
+                      transitionDuration:  const Duration(milliseconds: 300),
+                      pageBuilder:(context, animation, secondaryAnimation) => const SignInScreen(),
+                      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                        const begin = Offset(1.0, 0.0); // Start from the right side
+                        const end = Offset.zero; // End at the center
+                        const curve = Curves.easeInOut;
+
+                        final tween = Tween(begin: begin, end: end)
+                            .chain(CurveTween(curve: curve));
+                        final offsetAnimation = animation.drive(tween);
+
+                        return SlideTransition(
+                          position: offsetAnimation,
+                          child: child,
+                        );
+                      },
+                    ),
+                  );
                 },
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 10),
