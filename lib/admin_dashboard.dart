@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gate_pass/check_in.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
@@ -12,8 +13,8 @@ class AdminDashboardScreen extends StatelessWidget {
           ListView(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
             children: [
+              const SizedBox(height: 25),
               // Top section with welcome message and notification icon
-              const SizedBox(height: 25,),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -38,8 +39,39 @@ class AdminDashboardScreen extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _quickLinkButton("Check In", 'assets/user-edit.png'),
-                  _quickLinkButton("All Entries", 'assets/entry.png'),
+                  _quickLinkButton(
+                    "Check In",
+                    'assets/user-edit.png',
+                    onTap: () {
+                      Navigator.of(context).push(
+                        PageRouteBuilder(
+                          transitionDuration:  const Duration(milliseconds: 500),
+                          pageBuilder:(context, animation, secondaryAnimation) => const CheckInScreen(),
+                          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                            const begin = Offset(0.0, 1.0); // Start from the right side
+                            const end = Offset.zero; // End at the center
+                            const curve = Curves.easeInOut;
+
+                            final tween = Tween(begin: begin, end: end)
+                                .chain(CurveTween(curve: curve));
+                            final offsetAnimation = animation.drive(tween);
+
+                            return SlideTransition(
+                              position: offsetAnimation,
+                              child: child,
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                  _quickLinkButton(
+                    "All Entries",
+                    'assets/entry.png',
+                    onTap: () {
+                      // Handle All Entries button tap
+                    },
+                  ),
                 ],
               ),
               const SizedBox(height: 30),
@@ -117,28 +149,31 @@ class AdminDashboardScreen extends StatelessWidget {
     );
   }
 
-  // Widget for Quick Link button
-  Widget _quickLinkButton(String label, String iconPath) {
-    return Container(
-      width: 150,
-      height: 70,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.blue, width: 1),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Image.asset(iconPath, width: 24, height: 24),
-          const SizedBox(height: 5),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.blue,
-              fontWeight: FontWeight.bold,
+  // Widget for Quick Link button with onTap functionality
+  Widget _quickLinkButton(String label, String iconPath, {required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 150,
+        height: 70,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: Colors.blue, width: 1),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(iconPath, width: 24, height: 24),
+            const SizedBox(height: 5),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.blue,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -344,7 +379,6 @@ class AdminDashboardScreen extends StatelessWidget {
     );
   }
 
-  // Bottom navigation bar widget
   // Bottom navigation bar widget
   Widget _bottomNavigationBar() {
     return Container(
