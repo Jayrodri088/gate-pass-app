@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 class IdentityVerificationScreen extends StatefulWidget {
   const IdentityVerificationScreen({super.key});
@@ -9,22 +10,40 @@ class IdentityVerificationScreen extends StatefulWidget {
 
 class _IdentityVerificationScreenState extends State<IdentityVerificationScreen> {
   String? _activeStep; // Stores the currently active step ("Step 1" or "Step 2")
+  final ImagePicker _picker = ImagePicker();
+  final Map<String, bool> _photoTaken = {
+    "Step 1": false,
+    "Step 2": false,
+  };
 
-  void _toggleStep(String step) {
+  // Toggle step activation and open the camera on the second tap
+  void _toggleStep(String step) async {
     setState(() {
       if (_activeStep == step) {
-        // Double-tap action: navigate to the next screen
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const NextScreen(), // Replace with actual next screen
-          ),
-        );
+        // If already active, trigger camera
+        _openCamera(step);
+        _activeStep = null; // Reset active step after capturing photo
       } else {
-        // Set active step to glow and shadow
+        // Set active step to show glow and shadow
         _activeStep = step;
       }
     });
+  }
+
+  // Open the device camera and update state based on photo action
+  Future<void> _openCamera(String step) async {
+    final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+    if (photo != null) {
+      // If photo was successfully taken, mark step as completed
+      setState(() {
+        _photoTaken[step] = true; // Mark this step as completed with a checkmark
+      });
+    } else {
+      // If the user canceled, leave the arrow icon unchanged
+      setState(() {
+        _photoTaken[step] = false;
+      });
+    }
   }
 
   @override
@@ -74,6 +93,7 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
               stepTitle: "Identity Card",
               iconPath: 'assets/id.png',
               isActive: _activeStep == "Step 1",
+              isCompleted: _photoTaken["Step 1"] ?? false,
               onTap: () => _toggleStep("Step 1"),
             ),
             const SizedBox(height: 10),
@@ -84,9 +104,10 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
               stepTitle: "Take a Selfie",
               iconPath: 'assets/selfie.png',
               isActive: _activeStep == "Step 2",
+              isCompleted: _photoTaken["Step 2"] ?? false,
               onTap: () => _toggleStep("Step 2"),
             ),
-            const SizedBox(),
+            const SizedBox(height: 50),
 
             // Scan Now Button
             Center(
@@ -97,7 +118,7 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
                     // Handle scan action
                   },
                   icon: const Icon(Icons.camera_alt, color: Colors.white),
-                  label: const Text("Scan Now", style: TextStyle(color: Colors.white),),
+                  label: const Text("Scan Now", style: TextStyle(color: Colors.white)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -109,7 +130,7 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
                 ),
               ),
             ),
-            const SizedBox(height: 20), // Reduced spacing after button
+            const SizedBox(height: 300), // Adjusted spacing after button
 
             // Note Section
             const Padding(
@@ -144,6 +165,7 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
     required String stepTitle,
     required String iconPath,
     required bool isActive,
+    required bool isCompleted,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
@@ -193,27 +215,17 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
               ],
             ),
             const Spacer(),
-            const Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.black54,
-              size: 18,
-            ),
+            // Display checkmark icon if completed, else arrow icon
+            isCompleted
+                ? Image.asset('assets/checkmark.png', width: 24, height: 24, color: Colors.blue)
+                : const Icon(
+                    Icons.arrow_forward_ios,
+                    color: Colors.black54,
+                    size: 18,
+                  ),
           ],
         ),
       ),
-    );
-  }
-}
-
-// Placeholder for the next screen
-class NextScreen extends StatelessWidget {
-  const NextScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Next Screen")),
-      body: const Center(child: Text("This is the next screen")),
     );
   }
 }
