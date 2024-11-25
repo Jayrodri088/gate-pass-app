@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gate_pass/visitors_pass.dart';
 import 'package:image_picker/image_picker.dart';
 
 class IdentityVerificationScreen extends StatefulWidget {
@@ -115,7 +116,26 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    // Handle scan action
+                    Navigator.of(context).push(
+                      PageRouteBuilder(
+                        transitionDuration:  const Duration(milliseconds: 500),
+                        pageBuilder:(context, animation, secondaryAnimation) => const VisitorPassScreen(),
+                        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                          const begin = Offset(0.0, 1.0); // Start from the right side
+                          const end = Offset.zero; // End at the center
+                          const curve = Curves.easeInOut;
+
+                          final tween = Tween(begin: begin, end: end)
+                              .chain(CurveTween(curve: curve));
+                          final offsetAnimation = animation.drive(tween);
+
+                          return SlideTransition(
+                            position: offsetAnimation,
+                            child: child,
+                          );
+                        },
+                      ),
+                    );
                   },
                   icon: const Icon(Icons.camera_alt, color: Colors.white),
                   label: const Text("Scan Now", style: TextStyle(color: Colors.white)),

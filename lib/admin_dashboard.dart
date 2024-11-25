@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gate_pass/all_entries.dart';
 import 'package:gate_pass/check_in.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
@@ -69,7 +70,26 @@ class AdminDashboardScreen extends StatelessWidget {
                     "All Entries",
                     'assets/entry.png',
                     onTap: () {
-                      // Handle All Entries button tap
+                      Navigator.of(context).push(
+                        PageRouteBuilder(
+                          transitionDuration:  const Duration(milliseconds: 500),
+                          pageBuilder:(context, animation, secondaryAnimation) => const ApprovedScreen(),
+                          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                            const begin = Offset(0.0, 1.0); // Start from the right side
+                            const end = Offset.zero; // End at the center
+                            const curve = Curves.easeInOut;
+
+                            final tween = Tween(begin: begin, end: end)
+                                .chain(CurveTween(curve: curve));
+                            final offsetAnimation = animation.drive(tween);
+
+                            return SlideTransition(
+                              position: offsetAnimation,
+                              child: child,
+                            );
+                          },
+                        ),
+                      );
                     },
                   ),
                 ],
