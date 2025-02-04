@@ -122,15 +122,17 @@ class _CheckInScreenState extends State<CheckInScreen> {
     final responseData = jsonDecode(response.body);
 
     if (response.statusCode == 200 && responseData['success']) {
-
       _showMessage(responseData['message'], success: true);
+
+      String checkInId = responseData['id'].toString();
+      String checkInCode = responseData['code'];
 
       // Navigate to Identity Verification
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (context) =>
-              IdentityVerificationScreen(code: responseData['code']),
+              IdentityVerificationScreen(code: checkInCode, id: checkInId),
         ),
       );
     } else {

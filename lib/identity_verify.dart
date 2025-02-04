@@ -4,7 +4,8 @@ import 'package:image_picker/image_picker.dart';
 
 class IdentityVerificationScreen extends StatefulWidget {
   final String code;
-  const IdentityVerificationScreen({super.key, required this.code});
+  final String id;
+  const IdentityVerificationScreen({super.key, required this.code, required this.id});
 
   @override
   State<IdentityVerificationScreen> createState() => _IdentityVerificationScreenState();
