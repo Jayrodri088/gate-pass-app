@@ -3,7 +3,8 @@ import 'package:gate_pass/visitors_pass.dart';
 import 'package:image_picker/image_picker.dart';
 
 class IdentityVerificationScreen extends StatefulWidget {
-  const IdentityVerificationScreen({super.key});
+  final String code;
+  const IdentityVerificationScreen({super.key, required this.code});
 
   @override
   State<IdentityVerificationScreen> createState() => _IdentityVerificationScreenState();

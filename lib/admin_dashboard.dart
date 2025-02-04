@@ -3,7 +3,8 @@ import 'package:gate_pass/all_entries.dart';
 import 'package:gate_pass/check_in.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
-  const AdminDashboardScreen({super.key});
+  final String userId;
+  const AdminDashboardScreen({super.key, required, required this.userId });
 
   @override
   Widget build(BuildContext context) {

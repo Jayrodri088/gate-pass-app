@@ -1,3 +1,7 @@
+// ignore_for_file: use_build_context_synchronously
+
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:gate_pass/identity_verify.dart';
 
@@ -9,63 +13,146 @@ class CheckInScreen extends StatefulWidget {
 }
 
 class _CheckInScreenState extends State<CheckInScreen> {
-  // Controllers for each input field
+  // Controllers
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController addressController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController appointmentController = TextEditingController();
+  final TextEditingController intendToVisitController = TextEditingController();
 
   // Dropdown selections
-  String? visitIntent;
-  String? personalEffect;
   String? visitPurpose;
+  String? reception;
+  List<String> personalEffects = [];
+  bool isLoading = false;
+
+  // Options
+  final List<String> purposeOptions = [
+    'Interview',
+    'Appointment',
+    'Consultation',
+    'Meeting',
+    'Others'
+  ];
+
+  final List<String> effectOptions = [
+    'Phone',
+    'Laptop',
+    'Purse',
+    'Car',
+    'Equipment',
+    'Others'
+  ];
+
+  final List<String> receptionOptions = ['GOSS', 'Admin Block'];
 
   bool isFormComplete = false;
 
   @override
   void initState() {
     super.initState();
-    // Adding listeners to track changes in input fields
-    nameController.addListener(_updateFormState);
-    emailController.addListener(_updateFormState);
-    addressController.addListener(_updateFormState);
-    phoneController.addListener(_updateFormState);
-    appointmentController.addListener(_updateFormState);
+    // Add listeners to all controllers
+    final controllers = [
+      nameController,
+      emailController,
+      addressController,
+      phoneController,
+      appointmentController,
+      intendToVisitController
+    ];
+
+    for (var controller in controllers) {
+      controller.addListener(_updateFormState);
+    }
   }
 
   @override
   void dispose() {
-    // Dispose controllers
+    // Dispose all controllers
     nameController.dispose();
     emailController.dispose();
     addressController.dispose();
     phoneController.dispose();
     appointmentController.dispose();
+    intendToVisitController.dispose();
     super.dispose();
   }
 
   void _updateFormState() {
     setState(() {
-      // Check if all fields have values
       isFormComplete = nameController.text.isNotEmpty &&
           emailController.text.isNotEmpty &&
           addressController.text.isNotEmpty &&
           phoneController.text.isNotEmpty &&
           appointmentController.text.isNotEmpty &&
-          visitIntent != null &&
-          personalEffect != null &&
-          visitPurpose != null;
+          intendToVisitController.text.isNotEmpty &&
+          visitPurpose != null &&
+          personalEffects.isNotEmpty &&
+          reception != null;
     });
+  }
+
+  Future<void> _onUploadPressed() async {
+    if (!isFormComplete) return;
+
+    setState(() => isLoading = true);
+
+    const String apiUrl =
+        "http://10.10.2.34/gate-backend/checkin.php"; // Replace with actual URL
+
+    final response = await http.post(
+      Uri.parse(apiUrl),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "full_name": nameController.text,
+        "email": emailController.text,
+        "address": addressController.text,
+        "phone": phoneController.text,
+        "intend_to_visit": intendToVisitController.text,
+        "visit_purpose": visitPurpose,
+        "personal_effects": personalEffects, // List of items
+        "appointment_details": appointmentController.text,
+        "reception": reception,
+      }),
+    );
+
+    setState(() => isLoading = false);
+
+    final responseData = jsonDecode(response.body);
+
+    if (response.statusCode == 200 && responseData['success']) {
+
+      _showMessage(responseData['message'], success: true);
+
+      // Navigate to Identity Verification
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) =>
+              IdentityVerificationScreen(code: responseData['code']),
+        ),
+      );
+    } else {
+      _showMessage(responseData['message'] ?? "Check-in failed.");
+    }
+  }
+
+  void _showMessage(String message, {bool success = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+          content: Text(message),
+          backgroundColor: success ? Colors.green : Colors.red),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blue, // Blue background for header
+      backgroundColor: Colors.blue,
       body: Column(
         children: [
-          // Blue header with logo
+          // Header (unchanged)
           Container(
             padding: const EdgeInsets.only(top: 30, bottom: 10),
             child: Column(
@@ -75,17 +162,15 @@ class _CheckInScreenState extends State<CheckInScreen> {
                   children: [
                     IconButton(
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () {
-                        Navigator.pop(context); // Go back
-                      },
+                      onPressed: () => Navigator.pop(context),
                     ),
                   ],
                 ),
-                Center(
+                const Center(
                   child: Column(
                     children: [
-                      Image.asset(
-                        'assets/logo.png', // Update to your actual logo path
+                      Image(
+                        image: AssetImage('assets/logo.png'),
                         width: 80,
                         height: 80,
                       ),
@@ -96,7 +181,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
             ),
           ),
 
-          // White container with form content
+          // Form Content
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 2),
@@ -120,42 +205,63 @@ class _CheckInScreenState extends State<CheckInScreen> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Input fields
+                  // Input Fields
                   _buildInputField("Enter your full name", nameController),
                   _buildInputField("Enter your Email", emailController),
                   _buildInputField("Enter your Address", addressController),
                   _buildInputField("Enter your Phone number", phoneController),
-                  _buildDropdownField("Who do you Intend to Visit?", (value) {
-                    setState(() {
-                      visitIntent = value;
-                      _updateFormState();
-                    });
-                  }),
-                  _buildDropdownField("Personal Effect", (value) {
-                    setState(() {
-                      personalEffect = value;
-                      _updateFormState();
-                    });
-                  }),
-                  _buildDropdownField("Purpose Of Visit", (value) {
-                    setState(() {
-                      visitPurpose = value;
-                      _updateFormState();
-                    });
-                  }),
-                  _buildInputField("Any Prior Appointments", appointmentController),
+
+                  // Changed to TextField
+                  _buildInputField(
+                      "Who do you intend to visit?", intendToVisitController),
+
+                  // Purpose of Visit Dropdown
+                  _buildDropdownField(
+                    "Purpose Of Visit",
+                    purposeOptions,
+                    (value) {
+                      setState(() {
+                        visitPurpose = value;
+                        _updateFormState();
+                      });
+                    },
+                  ),
+
+                  // Personal Effects Multi-Select
+                  _buildMultiSelectField(),
+
+                  // Reception Dropdown
+                  _buildDropdownField(
+                    "Reception",
+                    receptionOptions,
+                    (value) {
+                      setState(() {
+                        reception = value;
+                        _updateFormState();
+                      });
+                    },
+                  ),
+
+                  _buildInputField(
+                      "Any Prior Appointments", appointmentController),
 
                   const SizedBox(height: 30),
 
-                  // Upload ID Button
+                  // Upload ID Button (unchanged)
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: isFormComplete ? _onUploadPressed : null,
-                      icon: const Icon(Icons.upload_file, color: Colors.white),
-                      label: const Text("Upload ID", style: TextStyle(color: Colors.white)),
+                      icon: isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Icon(Icons.upload_file, color: Colors.white),
+                      label: Text(
+                        isLoading ? "Processing..." : "Upload ID",
+                        style: const TextStyle(color: Colors.white),
+                      ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: isFormComplete ? Colors.blue : Colors.grey,
+                        backgroundColor:
+                            isFormComplete ? Colors.blue : Colors.grey,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
@@ -174,50 +280,26 @@ class _CheckInScreenState extends State<CheckInScreen> {
     );
   }
 
-  void _onUploadPressed() {
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        transitionDuration:  const Duration(milliseconds: 500),
-        pageBuilder:(context, animation, secondaryAnimation) => const IdentityVerificationScreen(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          const begin = Offset(0.0, 1.0); // Start from the right side
-          const end = Offset.zero; // End at the center
-          const curve = Curves.easeInOut;
-
-          final tween = Tween(begin: begin, end: end)
-              .chain(CurveTween(curve: curve));
-          final offsetAnimation = animation.drive(tween);
-
-          return SlideTransition(
-            position: offsetAnimation,
-            child: child,
-          );
-        },
-      ),
-    );
-  }
-
-  // Widget for Input Fields
   Widget _buildInputField(String hint, TextEditingController controller) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: TextField(
         controller: controller,
-        textAlignVertical: TextAlignVertical.center,
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: const TextStyle(fontSize: 15),
           border: const OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(30)),
           ),
-          contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+          contentPadding:
+              const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
         ),
       ),
     );
   }
 
-  // Widget for Dropdown Fields
-  Widget _buildDropdownField(String hint, ValueChanged<String?> onChanged) {
+  Widget _buildDropdownField(
+      String hint, List<String> options, ValueChanged<String?> onChanged) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: DropdownButtonFormField<String>(
@@ -227,15 +309,144 @@ class _CheckInScreenState extends State<CheckInScreen> {
           border: const OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(30)),
           ),
-          contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          contentPadding:
+              const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         ),
-        items: <String>['Option 1', 'Option 2', 'Option 3']
-            .map((String value) => DropdownMenuItem<String>(
+        items: options
+            .map((value) => DropdownMenuItem<String>(
                   value: value,
                   child: Text(value),
                 ))
             .toList(),
         onChanged: onChanged,
+      ),
+    );
+  }
+
+  Widget _buildMultiSelectField() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: InkWell(
+        onTap: () => _showMultiSelectDialog(),
+        child: InputDecorator(
+          decoration: const InputDecoration(
+            hintText: "Personal Effects",
+            hintStyle: TextStyle(fontSize: 15),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(30)),
+            ),
+            contentPadding: EdgeInsets.symmetric(
+              vertical: 12,
+              horizontal: 16,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Wrap(
+                spacing: 4,
+                children: personalEffects
+                    .map((effect) => Chip(
+                          label: Text(effect),
+                          backgroundColor: Colors.blue.withOpacity(0.1),
+                        ))
+                    .toList(),
+              ),
+              const Icon(Icons.arrow_drop_down, color: Colors.grey),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showMultiSelectDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Select Personal Effects"),
+        content: MultiSelectDialog(
+          items: effectOptions,
+          selectedItems: personalEffects,
+          onConfirm: (selected) {
+            setState(() {
+              personalEffects = selected;
+              _updateFormState();
+            });
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class MultiSelectDialog extends StatefulWidget {
+  final List<String> items;
+  final List<String> selectedItems;
+  final ValueChanged<List<String>> onConfirm;
+
+  const MultiSelectDialog({
+    required this.items,
+    required this.selectedItems,
+    required this.onConfirm,
+    super.key,
+  });
+
+  @override
+  _MultiSelectDialogState createState() => _MultiSelectDialogState();
+}
+
+class _MultiSelectDialogState extends State<MultiSelectDialog> {
+  late List<String> _tempSelected;
+
+  @override
+  void initState() {
+    super.initState();
+    _tempSelected = List.from(widget.selectedItems);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 300,
+      width: 300,
+      child: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              itemCount: widget.items.length,
+              itemBuilder: (context, index) => CheckboxListTile(
+                title: Text(widget.items[index]),
+                value: _tempSelected.contains(widget.items[index]),
+                onChanged: (bool? value) {
+                  setState(() {
+                    if (value == true) {
+                      _tempSelected.add(widget.items[index]);
+                    } else {
+                      _tempSelected.remove(widget.items[index]);
+                    }
+                  });
+                },
+              ),
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  widget.onConfirm(_tempSelected);
+                  Navigator.pop(context);
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          )
+        ],
       ),
     );
   }

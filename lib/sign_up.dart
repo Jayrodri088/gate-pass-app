@@ -1,5 +1,9 @@
+// ignore_for_file: use_build_context_synchronously
+
+import 'dart:convert';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:gate_pass/sign_in.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -10,10 +14,62 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
+  final TextEditingController _fullNameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
+
   bool _isChecked = false;
-  bool _passwordVisible = false; // State to toggle password visibility
-  bool _confirmPasswordVisible =
-      false; // State to toggle confirm password visibility
+  bool _passwordVisible = false;
+  bool _confirmPasswordVisible = false;
+  bool _isLoading = false;
+
+  Future<void> _signUp() async {
+    if (!_isChecked) {
+      _showMessage("You must accept the Terms and Privacy Policy.");
+      return;
+    }
+
+    if (_passwordController.text != _confirmPasswordController.text) {
+      _showMessage("Passwords do not match!");
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final url = Uri.parse(
+        "http://10.10.2.34/gate-backend/signup.php"); // Replace with your backend URL
+
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "full_name": _fullNameController.text.trim(),
+        "email": _emailController.text.trim(),
+        "password": _passwordController.text,
+      }),
+    );
+
+    setState(() => _isLoading = false);
+
+    final responseData = jsonDecode(response.body);
+    if (response.statusCode == 200 && responseData['success']) {
+      _showMessage("Sign-up successful!", success: true);
+      Navigator.pushReplacement(context,
+          MaterialPageRoute(builder: (context) => const SignInScreen()));
+    } else {
+      _showMessage(responseData['message'] ?? "Something went wrong.");
+    }
+  }
+
+  void _showMessage(String message, {bool success = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+          content: Text(message),
+          backgroundColor: success ? Colors.green : Colors.red),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,10 +133,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         onTap: () {
                           Navigator.of(context).push(
                             PageRouteBuilder(
-                              transitionDuration:  const Duration(milliseconds: 500),
-                              pageBuilder:(context, animation, secondaryAnimation) => const SignInScreen(),
-                              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                const begin = Offset(1.0, 0.0); // Start from the right side
+                              transitionDuration:
+                                  const Duration(milliseconds: 500),
+                              pageBuilder:
+                                  (context, animation, secondaryAnimation) =>
+                                      const SignInScreen(),
+                              transitionsBuilder: (context, animation,
+                                  secondaryAnimation, child) {
+                                const begin = Offset(
+                                    1.0, 0.0); // Start from the right side
                                 const end = Offset.zero; // End at the center
                                 const curve = Curves.easeInOut;
 
@@ -115,6 +176,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                   // Full Name field with customized cursor and focused border
                   TextField(
+                    controller: _fullNameController,
                     cursorColor: Colors.blue, // Sets cursor color to blue
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.person_outline),
@@ -136,6 +198,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                   // Email field with customized cursor and focused border
                   TextField(
+                    controller: _emailController,
                     cursorColor: Colors.blue, // Sets cursor color to blue
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.email_outlined),
@@ -157,6 +220,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                   // Password field with visibility toggle
                   TextField(
+                    controller: _passwordController,
                     cursorColor: Colors.blue, // Sets cursor color to blue
                     obscureText:
                         !_passwordVisible, // Toggles password visibility
@@ -194,6 +258,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                   // Confirm Password field with visibility toggle
                   TextField(
+                    controller: _confirmPasswordController,
                     cursorColor: Colors.blue, // Sets cursor color to blue
                     obscureText:
                         !_confirmPasswordVisible, // Toggles confirm password visibility
@@ -276,26 +341,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: _isChecked
-                          ? () {
-                              
-                            }
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
+                        onPressed: _isChecked ? (_isLoading ? null : _signUp) : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
                         ),
-                      ),
-                      child: const Text(
-                        "Sign Up",
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
+                        child: _isLoading
+                            ? const CircularProgressIndicator(
+                                color: Colors.white,
+                              )
+                            : const Text("Sign Up",
+                                style: TextStyle(
+                                    fontSize: 16, color: Colors.white))),
                   ),
 
                   const SizedBox(height: 10),
@@ -322,16 +382,24 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               ..onTap = () {
                                 Navigator.of(context).push(
                                   PageRouteBuilder(
-                                    transitionDuration:  const Duration(milliseconds: 500),
-                                    pageBuilder:(context, animation, secondaryAnimation) => const SignInScreen(),
-                                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                      const begin = Offset(0.0, 1.0); // Start from the right side
-                                      const end = Offset.zero; // End at the center
+                                    transitionDuration:
+                                        const Duration(milliseconds: 500),
+                                    pageBuilder: (context, animation,
+                                            secondaryAnimation) =>
+                                        const SignInScreen(),
+                                    transitionsBuilder: (context, animation,
+                                        secondaryAnimation, child) {
+                                      const begin = Offset(0.0,
+                                          1.0); // Start from the right side
+                                      const end =
+                                          Offset.zero; // End at the center
                                       const curve = Curves.easeInOut;
 
-                                      final tween = Tween(begin: begin, end: end)
-                                          .chain(CurveTween(curve: curve));
-                                      final offsetAnimation = animation.drive(tween);
+                                      final tween =
+                                          Tween(begin: begin, end: end)
+                                              .chain(CurveTween(curve: curve));
+                                      final offsetAnimation =
+                                          animation.drive(tween);
 
                                       return SlideTransition(
                                         position: offsetAnimation,
