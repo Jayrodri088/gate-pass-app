@@ -1,7 +1,54 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
-class VisitorPassScreen extends StatelessWidget {
-  const VisitorPassScreen({super.key});
+class VisitorPassScreen extends StatefulWidget {
+  final String code;
+  final String id;
+
+  const VisitorPassScreen({super.key, required this.code, required this.id});
+
+  @override
+  State<VisitorPassScreen> createState() => _VisitorPassScreenState();
+}
+
+class _VisitorPassScreenState extends State<VisitorPassScreen> {
+  Map<String, dynamic>? visitorData;
+  bool isLoading = true;
+  bool hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchVisitorDetails();
+  }
+
+  Future<void> _fetchVisitorDetails() async {
+    final url = Uri.parse(
+        "http://10.10.2.34/gate-backend/vistor_pass.php?id=${widget.id}");
+
+    try {
+      final response = await http.get(url);
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success']) {
+        setState(() {
+          visitorData = data['data'];
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          hasError = true;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        hasError = true;
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +62,7 @@ class VisitorPassScreen extends StatelessWidget {
             left: 0,
             right: 0,
             child: Image.asset(
-              'assets/frame.png', // Background image path
+              'assets/frame.png',
               fit: BoxFit.cover,
               height: 220,
             ),
@@ -45,19 +92,20 @@ class VisitorPassScreen extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
-                    const SizedBox(width: 48), // Placeholder for alignment
+                    const SizedBox(width: 48),
                   ],
                 ),
               ),
-              const SizedBox(height: 60), // Adjusted spacing for the card placement
+              const SizedBox(height: 60),
 
-              // Floating Visitor Card with Rounded Top Corners
+              // Floating Visitor Card
               Expanded(
                 child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(30), // Rounded corners on top
+                    borderRadius: BorderRadius.circular(30),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.1),
@@ -66,93 +114,129 @@ class VisitorPassScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: Column(
-                    children: [
-                      // Top Blue Section with Curved Bottom Edge
-                      ClipPath(
-                        clipper: BlueTopCurveClipper(),
-                        child: Container(
-                          width: double.infinity,
-                          height: 190,
-                          padding: const EdgeInsets.only(top: 20, bottom: 30),
-                          decoration: const BoxDecoration(
-                            color: Colors.blue,
-                            borderRadius: BorderRadius.only(
-                              topLeft: Radius.circular(30),
-                              topRight: Radius.circular(30),
-                            ), // Rounded top corners for the blue section
-                          ),
-                          child: const Column(
-                            children: [
-                              CircleAvatar(
-                                backgroundImage: AssetImage('assets/img_1.png'), // Visitor's image path
-                                radius: 35,
-                              ),
-                              SizedBox(height: 10),
-                              Text(
-                                "MR JAMES",
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                  child: isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : hasError
+                          ? const Center(
+                              child: Text("Failed to load visitor details."))
+                          : Column(
+                              children: [
+                                // Top Blue Section
+                                ClipPath(
+                                  clipper: BlueTopCurveClipper(),
+                                  child: Container(
+                                    width: double.infinity,
+                                    height: 190,
+                                    padding: const EdgeInsets.only(
+                                        top: 20, bottom: 30),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.blue,
+                                      borderRadius: BorderRadius.only(
+                                        topLeft: Radius.circular(30),
+                                        topRight: Radius.circular(30),
+                                      ),
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        CircleAvatar(
+                                          backgroundImage: visitorData?[
+                                                      'selfie_path'] !=
+                                                  null
+                                              ? NetworkImage(
+                                                  "http://10.10.2.34/gate-backend/${visitorData?['selfie_path']}"
+                                                      .replaceFirst('./', ''))
+                                              : const AssetImage(
+                                                      'assets/img_1.png')
+                                                  as ImageProvider,
+                                          radius: 35,
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Text(
+                                          visitorData?['full_name'] ?? "N/A",
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        const Text(
+                                          "Visitor",
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            color: Colors.white70,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                "Visitor",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.white70,
+
+                                // Visitor Details Section
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 10),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      _buildDetailRow("ID NUMBER",
+                                          visitorData?['id_number'] ?? "N/A"),
+                                      _buildDetailRow("EMAIL",
+                                          visitorData?['email'] ?? "N/A"),
+                                      _buildDetailRow("ADDRESS",
+                                          visitorData?['address'] ?? "N/A"),
+                                      _buildDetailRow(
+                                          "POV",
+                                          visitorData?['visit_purpose'] ??
+                                              "N/A"),
+                                      _buildDetailRow("PHONE NUMBER",
+                                          visitorData?['phone'] ?? "N/A"),
+                                      _buildDetailRow(
+                                          "Personal Effect",
+                                          _formatPersonalEffects(visitorData?[
+                                              'personal_effects'])),
+                                      _buildDetailRow(
+                                          "Who do you Intend to Visit?",
+                                          visitorData?['intend_to_visit'] ??
+                                              "N/A"),
+                                      _buildDetailRow(
+                                          "Any Prior Appointments",
+                                          visitorData?['appointment_details'] ??
+                                              "N/A"),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
 
-                      // Visitor Details Section in White
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildDetailRow("ID NUMBER", "Prc1112"),
-                            _buildDetailRow("EMAIL", "jamiee230@gmail.com"),
-                            _buildDetailRow("ADDRESS", "Billing Way Oregun"),
-                            _buildDetailRow("POV", "Interview"),
-                            _buildDetailRow("PHONE NUMBER", "090123467"),
-                            _buildDetailRow("Personal Effect", "Laptop"),
-                            _buildDetailRow("Who do you Intend to Visit?", "090123467"),
-                            _buildDetailRow("Any Prior Appointments", "Yes"),
-                          ],
-                        ),
-                      ),
-
-                      // Check-In Button at Bottom
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 20),
-                        child: SizedBox(
-                          width: MediaQuery.of(context).size.width * 0.8,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              // Handle check-in action
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              textStyle: const TextStyle(fontSize: 16),
+                                // Check-In Button
+                                // Padding(
+                                //   padding: const EdgeInsets.only(bottom: 20),
+                                //   child: SizedBox(
+                                //     width:
+                                //         MediaQuery.of(context).size.width * 0.8,
+                                //     child: ElevatedButton(
+                                //       onPressed: () {
+                                //         // Handle check-in action
+                                //       },
+                                //       style: ElevatedButton.styleFrom(
+                                //         backgroundColor: Colors.blue,
+                                //         padding: const EdgeInsets.symmetric(
+                                //             vertical: 14),
+                                //         shape: RoundedRectangleBorder(
+                                //           borderRadius:
+                                //               BorderRadius.circular(30),
+                                //         ),
+                                //         textStyle:
+                                //             const TextStyle(fontSize: 16),
+                                //       ),
+                                //       child: const Text(
+                                //         "Check In",
+                                //         style: TextStyle(color: Colors.white),
+                                //       ),
+                                //     ),
+                                //   ),
+                                // ),
+                              ],
                             ),
-                            child: const Text(
-                              "Check In",
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
             ],
@@ -162,7 +246,20 @@ class VisitorPassScreen extends StatelessWidget {
     );
   }
 
-  // Helper method to build each detail row with vertical divider
+  // Formats the personal effects list
+  String _formatPersonalEffects(dynamic effects) {
+    if (effects is List) {
+      return effects.join(", "); // Convert list to comma-separated string
+    } else if (effects is String) {
+      return effects
+          .replaceAll("[", "")
+          .replaceAll("]", "")
+          .replaceAll("\"", ""); // Cleanup string if received as JSON string
+    }
+    return "N/A"; // Default if the field is missing
+  }
+
+  // Helper method to build each detail row
   Widget _buildDetailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),

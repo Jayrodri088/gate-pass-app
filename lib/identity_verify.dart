@@ -1,6 +1,11 @@
+// ignore_for_file: use_build_context_synchronously, unused_element
+
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:gate_pass/visitors_pass.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
 
 class IdentityVerificationScreen extends StatefulWidget {
   final String code;
@@ -14,10 +19,8 @@ class IdentityVerificationScreen extends StatefulWidget {
 class _IdentityVerificationScreenState extends State<IdentityVerificationScreen> {
   String? _activeStep; // Stores the currently active step ("Step 1" or "Step 2")
   final ImagePicker _picker = ImagePicker();
-  final Map<String, bool> _photoTaken = {
-    "Step 1": false,
-    "Step 2": false,
-  };
+  final Map<String, File?> _capturedPhotos = {"Step 1": null, "Step 2": null};
+  bool _isUploading = false;
 
   // Toggle step activation and open the camera on the second tap
   void _toggleStep(String step) async {
@@ -38,16 +41,83 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
     final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
     if (photo != null) {
       // If photo was successfully taken, mark step as completed
+      final file = File(photo.path);
+      final fileSize = (await file.length()) / 1024; // Convert bytes to KB
+
+      print("📷 Captured Image - $step");
+      print("🗂️ Path: ${file.path}");
+      print("📏 Size: ${fileSize.toStringAsFixed(2)} KB");
       setState(() {
-        _photoTaken[step] = true; // Mark this step as completed with a checkmark
+        _capturedPhotos[step] = file; // Mark this step as completed with a checkmark
       });
     } else {
       // If the user canceled, leave the arrow icon unchanged
       setState(() {
-        _photoTaken[step] = false;
+        _capturedPhotos[step] = null;
       });
     }
   }
+
+  Future<void> _uploadImages() async {
+    if (_capturedPhotos["Step 1"] == null || _capturedPhotos["Step 2"] == null) {
+      _showMessage("Please capture both ID Card and Selfie before proceeding.");
+      return;
+    }
+
+    setState(() => _isUploading = true);
+
+    var url = Uri.parse("http://10.10.2.34/gate-backend/verify_id.php");
+    var request = http.MultipartRequest("POST", url)
+      ..fields['check_in_id'] = widget.id
+      ..files.add(await http.MultipartFile.fromPath('id_card', _capturedPhotos["Step 1"]!.path))
+      ..files.add(await http.MultipartFile.fromPath('selfie', _capturedPhotos["Step 2"]!.path));
+
+    var response = await request.send();
+    var responseData = await response.stream.bytesToString();
+    var decodedResponse = jsonDecode(responseData);
+
+    setState(() => _isUploading = false);
+
+    if (response.statusCode == 200 && decodedResponse['success']) {
+      _showMessage("Verification successful!", success: true);
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          transitionDuration: const Duration(milliseconds: 500),
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              VisitorPassScreen(code: widget.code, id: widget.id),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(0.0, 1.0);
+            const end = Offset.zero;
+            const curve = Curves.easeInOut;
+
+            final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+            final offsetAnimation = animation.drive(tween);
+
+            return SlideTransition(
+              position: offsetAnimation,
+              child: child,
+            );
+          },
+        ),
+      );
+    } else {
+      _showMessage(decodedResponse['message'] ?? "Verification failed.");
+      _showMessage(decodedResponse['error'] ?? "Verification failed.");
+    }
+  }
+
+  void _showMessage(String message, {bool success = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: success ? Colors.green : Colors.red,
+      ),
+    );
+  }
+
+ 
+
 
   @override
   Widget build(BuildContext context) {
@@ -96,7 +166,7 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
               stepTitle: "Identity Card",
               iconPath: 'assets/id.png',
               isActive: _activeStep == "Step 1",
-              isCompleted: _photoTaken["Step 1"] ?? false,
+              isCompleted: _capturedPhotos["Step 2"] != null,
               onTap: () => _toggleStep("Step 1"),
             ),
             const SizedBox(height: 10),
@@ -107,7 +177,7 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
               stepTitle: "Take a Selfie",
               iconPath: 'assets/selfie.png',
               isActive: _activeStep == "Step 2",
-              isCompleted: _photoTaken["Step 2"] ?? false,
+              isCompleted: _capturedPhotos["Step 2"] != null,
               onTap: () => _toggleStep("Step 2"),
             ),
             const SizedBox(height: 50),
@@ -117,30 +187,11 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      PageRouteBuilder(
-                        transitionDuration:  const Duration(milliseconds: 500),
-                        pageBuilder:(context, animation, secondaryAnimation) => const VisitorPassScreen(),
-                        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                          const begin = Offset(0.0, 1.0); // Start from the right side
-                          const end = Offset.zero; // End at the center
-                          const curve = Curves.easeInOut;
-
-                          final tween = Tween(begin: begin, end: end)
-                              .chain(CurveTween(curve: curve));
-                          final offsetAnimation = animation.drive(tween);
-
-                          return SlideTransition(
-                            position: offsetAnimation,
-                            child: child,
-                          );
-                        },
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.camera_alt, color: Colors.white),
-                  label: const Text("Scan Now", style: TextStyle(color: Colors.white)),
+                  onPressed: _isUploading ? null : _uploadImages,
+                  icon: _isUploading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Icon(Icons.upload_file, color: Colors.white),
+                  label: Text(_isUploading ? "Uploading..." : "Upload Now", style: const TextStyle(color: Colors.white),),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -180,8 +231,9 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
       ),
     );
   }
+  }
 
-  // Widget to build each step card
+      // Widget to build each step card
   Widget _buildStepCard({
     required String stepNumber,
     required String stepTitle,
@@ -250,4 +302,4 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
       ),
     );
   }
-}
+
