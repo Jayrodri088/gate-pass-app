@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:gate_pass/pending_screens.dart';
 import 'package:gate_pass/rejected_screen.dart';
 
@@ -16,8 +18,49 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class ApprovedScreen extends StatelessWidget {
+class ApprovedScreen extends StatefulWidget {
   const ApprovedScreen({super.key});
+
+  @override
+  State<ApprovedScreen> createState() => _ApprovedScreenState();
+}
+
+class _ApprovedScreenState extends State<ApprovedScreen> {
+  List<dynamic> approvedRequests = [];
+  bool isLoading = true;
+  bool hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchApprovedRequests();
+  }
+
+  Future<void> _fetchApprovedRequests() async {
+    final url = Uri.parse("http://10.10.2.34/gate-backend/approved.php");
+
+    try {
+      final response = await http.get(url);
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success']) {
+        setState(() {
+          approvedRequests = data['data'];
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          hasError = true;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        hasError = true;
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,12 +87,18 @@ class ApprovedScreen extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: ListView.builder(
-              itemCount: 5,
-              itemBuilder: (context, index) {
-                return _buildVisitorCard();
-              },
-            ),
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : hasError
+                    ? const Center(child: Text("Failed to load requests"))
+                    : approvedRequests.isEmpty
+                        ? const Center(child: Text("No approved requests"))
+                        : ListView.builder(
+                            itemCount: approvedRequests.length,
+                            itemBuilder: (context, index) {
+                              return _buildVisitorCard(approvedRequests[index]);
+                            },
+                          ),
           ),
         ],
       ),
@@ -66,14 +115,7 @@ class ApprovedScreen extends StatelessWidget {
             context,
             title: "Approved",
             isSelected: activeTab == "Approved",
-            onTap: () {
-              if (activeTab != "Approved") {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ApprovedScreen()),
-                );
-              }
-            },
+            onTap: () {},
           ),
           _buildTab(
             context,
@@ -128,7 +170,7 @@ class ApprovedScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildVisitorCard() {
+  Widget _buildVisitorCard(Map<String, dynamic> visitor) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Container(
@@ -141,36 +183,38 @@ class ApprovedScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Row(
+              Row(
                 children: [
                   CircleAvatar(
                     radius: 20,
-                    backgroundImage: AssetImage('assets/img_1.png'),
+                    backgroundImage: visitor['selfie_path'] != null
+                        ? NetworkImage("http://10.10.2.34/gate-backend/${visitor['selfie_path']}".replaceFirst('./', ''))
+                        : const AssetImage('assets/img_1.png') as ImageProvider,
                   ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "Mr James Godwin",
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                          visitor['full_name'] ?? "N/A",
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          "Interview",
-                          style: TextStyle(color: Colors.grey, fontSize: 12),
+                          visitor['visit_purpose'] ?? "N/A",
+                          style: const TextStyle(color: Colors.grey, fontSize: 12),
                         ),
                       ],
                     ),
                   ),
                   Text(
-                    "#002",
-                    style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                    visitor['id_number'] ?? "N/A",
+                    style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-              _buildDateAndTimeRow(),
+              _buildDateAndTimeRow(visitor),
             ],
           ),
         ),
@@ -178,7 +222,7 @@ class ApprovedScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDateAndTimeRow() {
+  Widget _buildDateAndTimeRow(Map<String, dynamic> visitor) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(8.0),
@@ -189,29 +233,9 @@ class ApprovedScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              Image.asset(
-                'assets/time.png',
-                width: 16,
-                height: 16,
-                color: Colors.blue,
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                "Thursday",
-                style: TextStyle(color: Colors.black, fontSize: 12),
-              ),
-            ],
-          ),
-          const Text(
-            "Oct. 6, 2024",
-            style: TextStyle(color: Colors.black, fontSize: 12),
-          ),
-          const Text(
-            "8:00 -10:30am",
-            style: TextStyle(color: Colors.blue, fontSize: 12, fontWeight: FontWeight.bold),
-          ),
+          Text(visitor['day'] ?? "N/A", style: const TextStyle(color: Colors.black, fontSize: 12)),
+          Text(visitor['date'] ?? "N/A", style: const TextStyle(color: Colors.black, fontSize: 12)),
+          Text(visitor['time'] ?? "N/A", style: const TextStyle(color: Colors.blue, fontSize: 12, fontWeight: FontWeight.bold)),
         ],
       ),
     );

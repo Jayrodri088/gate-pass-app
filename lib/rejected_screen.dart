@@ -1,9 +1,56 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:gate_pass/all_entries.dart';
 import 'package:gate_pass/pending_screens.dart';
 
-class RejectedScreen extends StatelessWidget {
+class RejectedScreen extends StatefulWidget {
   const RejectedScreen({super.key});
+
+  @override
+  State<RejectedScreen> createState() => _RejectedScreenState();
+}
+
+class _RejectedScreenState extends State<RejectedScreen> {
+  List<dynamic> rejectedRequests = [];
+  bool isLoading = true;
+  bool hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRejectedRequests();
+  }
+
+  Future<void> _fetchRejectedRequests() async {
+    final url = Uri.parse("http://10.10.2.34/gate-backend/rejected.php");
+
+    try {
+      final response = await http.get(url);
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success']) {
+        setState(() {
+          rejectedRequests = data['data'];
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          hasError = true;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        hasError = true;
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _deleteAllRejected() async {
+    // Implement delete logic later
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,33 +69,42 @@ class RejectedScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildTabBar(context, activeTab: "Cancelled"),
-          const Padding(
-            padding: EdgeInsets.all(16.0),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
+                const Text(
                   "Recent Visitor’s",
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
-                Text(
-                  "Delete All",
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue,
+                GestureDetector(
+                  onTap: _deleteAllRejected,
+                  child: const Text(
+                    "Delete All",
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
           Expanded(
-            child: ListView.builder(
-              itemCount: 5,
-              itemBuilder: (context, index) {
-                return _buildVisitorCard();
-              },
-            ),
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : hasError
+                    ? const Center(child: Text("Failed to load requests"))
+                    : rejectedRequests.isEmpty
+                        ? const Center(child: Text("No cancelled requests"))
+                        : ListView.builder(
+                            itemCount: rejectedRequests.length,
+                            itemBuilder: (context, index) {
+                              return _buildVisitorCard(rejectedRequests[index]);
+                            },
+                          ),
           ),
         ],
       ),
@@ -87,9 +143,7 @@ class RejectedScreen extends StatelessWidget {
             context,
             title: "Cancelled",
             isSelected: activeTab == "Cancelled",
-            onTap: () {
-              // Already on Cancelled screen, do nothing
-            },
+            onTap: () {},
           ),
         ],
       ),
@@ -122,54 +176,47 @@ class RejectedScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildVisitorCard() {
+  Widget _buildVisitorCard(Map<String, dynamic> visitor) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFFE3F2FD), // Light blue background for cancelled cards
+          color: const Color(0xFFE3F2FD),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Row(
             children: [
-              const CircleAvatar(
-                radius: 20, // Smaller profile picture
-                backgroundImage: AssetImage('assets/img_1.png'),
+              CircleAvatar(
+                radius: 20,
+                backgroundImage: visitor['selfie_path'] != null
+                    ? NetworkImage("http://10.10.2.34/gate-backend/${visitor['selfie_path']}".replaceFirst('./', ''))
+                    : const AssetImage('assets/img_1.png') as ImageProvider,
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Mr James Godwin",
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black),
+                      visitor['full_name'] ?? "N/A",
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                     ),
                     Text(
-                      "Interview",
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.normal,
-                          color: Colors.black54),
+                      visitor['visit_purpose'] ?? "N/A",
+                      style: const TextStyle(fontSize: 12, color: Colors.black54),
                     ),
                     Text(
-                      "COT Office",
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.normal,
-                          color: Colors.blue),
+                      visitor['id_number'] ?? "N/A",
+                      style: const TextStyle(fontSize: 12, color: Colors.blue),
                     ),
                   ],
                 ),
               ),
               GestureDetector(
                 onTap: () {
-                  // Handle delete action
+                  // Implement delete functionality later
                 },
                 child: Image.asset(
                   'assets/cancel.png',
@@ -184,5 +231,3 @@ class RejectedScreen extends StatelessWidget {
     );
   }
 }
-
-
