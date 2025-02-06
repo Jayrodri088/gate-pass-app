@@ -19,7 +19,8 @@ class MyApp extends StatelessWidget {
 }
 
 class ApprovedScreen extends StatefulWidget {
-  const ApprovedScreen({super.key});
+  final String? role; // Role is optional
+  const ApprovedScreen({super.key, this.role});
 
   @override
   State<ApprovedScreen> createState() => _ApprovedScreenState();
@@ -37,7 +38,8 @@ class _ApprovedScreenState extends State<ApprovedScreen> {
   }
 
   Future<void> _fetchApprovedRequests() async {
-    final url = Uri.parse("http://10.10.2.34/gate-backend/approved.php");
+    final baseUrl = "http://10.10.2.34/gate-backend/approved.php";
+    final url = widget.role != null ? Uri.parse("$baseUrl?role=${widget.role}") : Uri.parse(baseUrl);
 
     try {
       final response = await http.get(url);
@@ -124,7 +126,7 @@ class _ApprovedScreenState extends State<ApprovedScreen> {
             onTap: () {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => const PendingScreen()),
+                MaterialPageRoute(builder: (context) => PendingScreen(role: widget.role)),
               );
             },
           ),
@@ -135,7 +137,7 @@ class _ApprovedScreenState extends State<ApprovedScreen> {
             onTap: () {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => const RejectedScreen()),
+                MaterialPageRoute(builder: (context) => RejectedScreen(role: widget.role)),
               );
             },
           ),

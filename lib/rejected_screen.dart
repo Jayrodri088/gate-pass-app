@@ -5,7 +5,8 @@ import 'package:gate_pass/all_entries.dart';
 import 'package:gate_pass/pending_screens.dart';
 
 class RejectedScreen extends StatefulWidget {
-  const RejectedScreen({super.key});
+  final String? role; // Role is optional
+  const RejectedScreen({super.key, this.role});
 
   @override
   State<RejectedScreen> createState() => _RejectedScreenState();
@@ -23,7 +24,9 @@ class _RejectedScreenState extends State<RejectedScreen> {
   }
 
   Future<void> _fetchRejectedRequests() async {
-    final url = Uri.parse("http://10.10.2.34/gate-backend/rejected.php");
+    final baseUrl = "http://10.10.2.34/gate-backend/rejected.php";
+    final url = widget.role != null ? Uri.parse("$baseUrl?role=${widget.role}") : Uri.parse(baseUrl);
+
 
     try {
       final response = await http.get(url);
@@ -124,7 +127,7 @@ class _RejectedScreenState extends State<RejectedScreen> {
             onTap: () {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => const ApprovedScreen()),
+                MaterialPageRoute(builder: (context) => ApprovedScreen(role: widget.role)),
               );
             },
           ),
@@ -135,7 +138,7 @@ class _RejectedScreenState extends State<RejectedScreen> {
             onTap: () {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => const PendingScreen()),
+                MaterialPageRoute(builder: (context) => PendingScreen(role: widget.role)),
               );
             },
           ),
