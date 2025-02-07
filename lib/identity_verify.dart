@@ -3,6 +3,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:gate_pass/admin_dashboard.dart';
 import 'package:gate_pass/visitors_pass.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
@@ -10,14 +11,18 @@ import 'package:http/http.dart' as http;
 class IdentityVerificationScreen extends StatefulWidget {
   final String code;
   final String id;
-  const IdentityVerificationScreen({super.key, required this.code, required this.id});
+  const IdentityVerificationScreen(
+      {super.key, required this.code, required this.id});
 
   @override
-  State<IdentityVerificationScreen> createState() => _IdentityVerificationScreenState();
+  State<IdentityVerificationScreen> createState() =>
+      _IdentityVerificationScreenState();
 }
 
-class _IdentityVerificationScreenState extends State<IdentityVerificationScreen> {
-  String? _activeStep; // Stores the currently active step ("Step 1" or "Step 2")
+class _IdentityVerificationScreenState
+    extends State<IdentityVerificationScreen> {
+  String?
+      _activeStep; // Stores the currently active step ("Step 1" or "Step 2")
   final ImagePicker _picker = ImagePicker();
   final Map<String, File?> _capturedPhotos = {"Step 1": null, "Step 2": null};
   bool _isUploading = false;
@@ -48,7 +53,8 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
       print("🗂️ Path: ${file.path}");
       print("📏 Size: ${fileSize.toStringAsFixed(2)} KB");
       setState(() {
-        _capturedPhotos[step] = file; // Mark this step as completed with a checkmark
+        _capturedPhotos[step] =
+            file; // Mark this step as completed with a checkmark
       });
     } else {
       // If the user canceled, leave the arrow icon unchanged
@@ -59,7 +65,8 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
   }
 
   Future<void> _uploadImages() async {
-    if (_capturedPhotos["Step 1"] == null || _capturedPhotos["Step 2"] == null) {
+    if (_capturedPhotos["Step 1"] == null ||
+        _capturedPhotos["Step 2"] == null) {
       _showMessage("Please capture both ID Card and Selfie before proceeding.");
       return;
     }
@@ -69,8 +76,10 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
     var url = Uri.parse("http://10.10.2.34/gate-backend/verify_id.php");
     var request = http.MultipartRequest("POST", url)
       ..fields['check_in_id'] = widget.id
-      ..files.add(await http.MultipartFile.fromPath('id_card', _capturedPhotos["Step 1"]!.path))
-      ..files.add(await http.MultipartFile.fromPath('selfie', _capturedPhotos["Step 2"]!.path));
+      ..files.add(await http.MultipartFile.fromPath(
+          'id_card', _capturedPhotos["Step 1"]!.path))
+      ..files.add(await http.MultipartFile.fromPath(
+          'selfie', _capturedPhotos["Step 2"]!.path));
 
     var response = await request.send();
     var responseData = await response.stream.bytesToString();
@@ -80,6 +89,10 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
 
     if (response.statusCode == 200 && decodedResponse['success']) {
       _showMessage("Verification successful!", success: true);
+
+      // ✅ Trigger dashboard refresh without navigating
+      refreshDashboard.value = true;
+
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
@@ -91,7 +104,8 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
             const end = Offset.zero;
             const curve = Curves.easeInOut;
 
-            final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+            final tween =
+                Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
             final offsetAnimation = animation.drive(tween);
 
             return SlideTransition(
@@ -115,9 +129,6 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
       ),
     );
   }
-
- 
-
 
   @override
   Widget build(BuildContext context) {
@@ -191,7 +202,10 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
                   icon: _isUploading
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Icon(Icons.upload_file, color: Colors.white),
-                  label: Text(_isUploading ? "Uploading..." : "Upload Now", style: const TextStyle(color: Colors.white),),
+                  label: Text(
+                    _isUploading ? "Uploading..." : "Upload Now",
+                    style: const TextStyle(color: Colors.white),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -231,75 +245,75 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
       ),
     );
   }
-  }
+}
 
-      // Widget to build each step card
-  Widget _buildStepCard({
-    required String stepNumber,
-    required String stepTitle,
-    required String iconPath,
-    required bool isActive,
-    required bool isCompleted,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-        decoration: BoxDecoration(
-          border: Border.all(color: isActive ? Colors.blue : Colors.grey[300]!),
-          borderRadius: BorderRadius.circular(10),
-          color: Colors.white,
-          boxShadow: isActive
-              ? [
-                  BoxShadow(
-                    color: Colors.blue.withOpacity(0.3),
-                    blurRadius: 10,
-                    spreadRadius: 2,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : [],
-        ),
-        child: Row(
-          children: [
-            Image.asset(iconPath, width: 40, height: 40), // Icon
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  stepNumber,
-                  style: const TextStyle(
-                    color: Colors.black54,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
+// Widget to build each step card
+Widget _buildStepCard({
+  required String stepNumber,
+  required String stepTitle,
+  required String iconPath,
+  required bool isActive,
+  required bool isCompleted,
+  required VoidCallback onTap,
+}) {
+  return GestureDetector(
+    onTap: onTap,
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+      decoration: BoxDecoration(
+        border: Border.all(color: isActive ? Colors.blue : Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(10),
+        color: Colors.white,
+        boxShadow: isActive
+            ? [
+                BoxShadow(
+                  color: Colors.blue.withOpacity(0.3),
+                  blurRadius: 10,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 4),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  stepTitle,
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const Spacer(),
-            // Display checkmark icon if completed, else arrow icon
-            isCompleted
-                ? Image.asset('assets/checkmark.png', width: 24, height: 24, color: Colors.blue)
-                : const Icon(
-                    Icons.arrow_forward_ios,
-                    color: Colors.black54,
-                    size: 18,
-                  ),
-          ],
-        ),
+              ]
+            : [],
       ),
-    );
-  }
-
+      child: Row(
+        children: [
+          Image.asset(iconPath, width: 40, height: 40), // Icon
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                stepNumber,
+                style: const TextStyle(
+                  color: Colors.black54,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                stepTitle,
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          // Display checkmark icon if completed, else arrow icon
+          isCompleted
+              ? Image.asset('assets/checkmark.png',
+                  width: 24, height: 24, color: Colors.blue)
+              : const Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.black54,
+                  size: 18,
+                ),
+        ],
+      ),
+    ),
+  );
+}

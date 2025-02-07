@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:gate_pass/notification.dart';
 import 'package:http/http.dart' as http;
 import 'package:gate_pass/all_entries.dart';
 import 'package:gate_pass/check_in.dart';
-
 
 class AdminDashboardScreen extends StatefulWidget {
   final String userId;
@@ -14,19 +14,30 @@ class AdminDashboardScreen extends StatefulWidget {
   State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
 }
 
+ValueNotifier<bool> refreshDashboard = ValueNotifier(false);
+
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   String fullName = "";
   String role = "";
   bool canSeeCheckIn = false;
   bool isLoading = true;
+  int unreadNotifications = 0;
   List<dynamic> pendingRequests = [];
   List<dynamic> recentVisitors = [];
 
   @override
   void initState() {
-    super.initState();
-    _fetchDashboardData();
-  }
+  super.initState();
+  _fetchDashboardData();
+
+  // Listen for refresh trigger from Identity Verification Screen
+  refreshDashboard.addListener(() {
+    if (refreshDashboard.value) {
+      _fetchDashboardData();
+      refreshDashboard.value = false; // Reset trigger after refresh
+    }
+  });
+}
 
   Future<void> _fetchDashboardData() async {
     const String apiUrl = "http://10.10.2.34/gate-backend/dashboard.php";
@@ -47,11 +58,35 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           pendingRequests = responseData['pending_entries'];
           recentVisitors = responseData['recent_visitors'];
         });
+        // Fetch unread notifications after successfully fetching dashboard data
+        _fetchUnreadNotifications();
       }
     } catch (e) {
       print("Error fetching dashboard data: $e");
     } finally {
       setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _fetchUnreadNotifications() async {
+    String apiUrl = "http://10.10.2.34/gate-backend/count_notifications.php";
+
+    // Append role if available
+    if (role.isNotEmpty) {
+      apiUrl += "?role=$role";
+    }
+
+    try {
+      final response = await http.get(Uri.parse(apiUrl));
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && responseData['success']) {
+        setState(() {
+          unreadNotifications = responseData['unread_count'];
+        });
+      }
+    } catch (e) {
+      print("Error fetching unread notifications: $e");
     }
   }
 
@@ -64,7 +99,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           isLoading
               ? const Center(child: CircularProgressIndicator())
               : ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                   children: [
                     const SizedBox(height: 25),
                     Row(
@@ -72,27 +108,77 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       children: [
                         Text(
                           "Welcome $fullName",
-                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                              fontSize: 24, fontWeight: FontWeight.bold),
                         ),
-                        IconButton(
-                          icon: Image.asset('assets/notification.png', width: 22),
-                          onPressed: () {},
+                        Stack(
+                          children: [
+                            IconButton(
+                              icon: Image.asset('assets/notification.png',
+                                  width: 22),
+                              onPressed: () {
+                                Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                            NotificationScreen(
+                                              role: role,
+                                            ))).then((_) {
+                                  _fetchUnreadNotifications(); // Refresh count when returning
+                                });
+                              },
+                            ),
+                            if (unreadNotifications > 0)
+                              Positioned(
+                                right: 5,
+                                top: 5,
+                                child: Container(
+                                  padding: const EdgeInsets.all(5),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Text(
+                                    unreadNotifications.toString(),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ],
                     ),
                     const SizedBox(height: 20),
 
                     // Quick Links
-                    const Text("Quick Links", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const Text("Quick Links",
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        if (canSeeCheckIn) _quickLinkButton("Check In", 'assets/user-edit.png', onTap: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (context) => const CheckInScreen()));
-                        }),
-                        _quickLinkButton("All Entries", 'assets/entry.png', onTap: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (context) => ApprovedScreen(role: role,)));
+                        if (canSeeCheckIn)
+                          _quickLinkButton("Check In", 'assets/user-edit.png',
+                              onTap: () {
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        const CheckInScreen()));
+                          }),
+                        _quickLinkButton("All Entries", 'assets/entry.png',
+                            onTap: () {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => ApprovedScreen(
+                                        role: role,
+                                      )));
                         }),
                       ],
                     ),
@@ -124,7 +210,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _quickLinkButton(String label, String iconPath, {required VoidCallback onTap}) {
+  Widget _quickLinkButton(String label, String iconPath,
+      {required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -156,7 +243,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        Text(title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         TextButton(
           onPressed: () {},
           child: const Text("See All", style: TextStyle(color: Colors.blue)),
@@ -205,8 +293,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         children: [
           CircleAvatar(
             backgroundImage: profileImage != " "
-                        ? NetworkImage("http://10.10.2.34/gate-backend/$profileImage".replaceFirst('./', ''))
-                        : const AssetImage('assets/img_1.png') as ImageProvider,
+                ? NetworkImage("http://10.10.2.34/gate-backend/$profileImage"
+                    .replaceFirst('./', ''))
+                : const AssetImage('assets/img_1.png') as ImageProvider,
             radius: 25,
           ),
           const SizedBox(width: 10),
@@ -215,13 +304,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text("$purpose\n$location", style: const TextStyle(color: Colors.black54)),
+                Text("$purpose\n$location",
+                    style: const TextStyle(color: Colors.black54)),
                 const SizedBox(height: 10),
                 Row(
                   children: [
                     Flexible(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.blue[50],
                           borderRadius: BorderRadius.circular(10),
@@ -230,9 +321,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           scrollDirection: Axis.horizontal,
                           child: Row(
                             children: [
-                              Image.asset('assets/time.png', width: 12, color: Colors.blue),
+                              Image.asset('assets/time.png',
+                                  width: 12, color: Colors.blue),
                               const SizedBox(width: 4),
-                              Text("$date | $time", style: const TextStyle(fontSize: 12)),
+                              Text("$date | $time",
+                                  style: const TextStyle(fontSize: 12)),
                             ],
                           ),
                         ),
@@ -243,7 +336,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ],
             ),
           ),
-          Text(code, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+          Text(code,
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold, color: Colors.blue)),
         ],
       ),
     );
