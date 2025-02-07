@@ -24,6 +24,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
   // Dropdown selections
   String? visitPurpose;
   String? reception;
+  String? priorAppointment;
   List<String> personalEffects = [];
   bool isLoading = false;
 
@@ -46,6 +47,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
   ];
 
   final List<String> receptionOptions = ['GOSS', 'Admin Block'];
+  final List<String> priorAppointmentOptions = ['Yes', 'No'];
 
   bool isFormComplete = false;
 
@@ -85,7 +87,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
           emailController.text.isNotEmpty &&
           addressController.text.isNotEmpty &&
           phoneController.text.isNotEmpty &&
-          appointmentController.text.isNotEmpty &&
+          priorAppointment != null &&
           intendToVisitController.text.isNotEmpty &&
           visitPurpose != null &&
           personalEffects.isNotEmpty &&
@@ -112,7 +114,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
         "intend_to_visit": intendToVisitController.text,
         "visit_purpose": visitPurpose,
         "personal_effects": personalEffects, // List of items
-        "appointment_details": appointmentController.text,
+        "appointment_details": priorAppointment,
         "reception": reception,
       }),
     );
@@ -244,8 +246,16 @@ class _CheckInScreenState extends State<CheckInScreen> {
                     },
                   ),
 
-                  _buildInputField(
-                      "Any Prior Appointments", appointmentController),
+                  _buildDropdownField(
+                    "Any Prior Appointments?",
+                    priorAppointmentOptions,
+                    (value) {
+                      setState(() {
+                        priorAppointment = value;
+                        _updateFormState();
+                      });
+                    },
+                  ),
 
                   const SizedBox(height: 30),
 
@@ -326,41 +336,42 @@ class _CheckInScreenState extends State<CheckInScreen> {
   }
 
   Widget _buildMultiSelectField() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: InkWell(
-        onTap: () => _showMultiSelectDialog(),
-        child: InputDecorator(
-          decoration: const InputDecoration(
-            hintText: "Personal Effects",
-            hintStyle: TextStyle(fontSize: 15),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(30)),
-            ),
-            contentPadding: EdgeInsets.symmetric(
-              vertical: 12,
-              horizontal: 16,
-            ),
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    child: InkWell(
+      onTap: () => _showMultiSelectDialog(),
+      child: InputDecorator(
+        decoration: const InputDecoration(
+          hintText: "Personal Effects",
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(30)),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Wrap(
-                spacing: 4,
+          contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Wrap(
+                spacing: 6, // Space between chips
+                runSpacing: 4, // Space between rows
+                alignment: WrapAlignment.start, // Prevents overflow
                 children: personalEffects
                     .map((effect) => Chip(
-                          label: Text(effect),
+                          label: Text(effect, overflow: TextOverflow.ellipsis),
                           backgroundColor: Colors.blue.withOpacity(0.1),
                         ))
                     .toList(),
               ),
-              const Icon(Icons.arrow_drop_down, color: Colors.grey),
-            ],
-          ),
+            ),
+            const Icon(Icons.arrow_drop_down, color: Colors.grey),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
+
 
   void _showMultiSelectDialog() {
     showDialog(

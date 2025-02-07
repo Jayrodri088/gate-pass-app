@@ -199,12 +199,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
 
           // Floating Bottom Navigation Bar
-          Positioned(
-            bottom: 20,
-            left: 0,
-            right: 0,
-            child: Center(child: _bottomNavigationBar()),
-          ),
+          // Positioned(
+          //   bottom: 20,
+          //   left: 0,
+          //   right: 0,
+          //   child: Center(child: _bottomNavigationBar()),
+          // ),
         ],
       ),
     );

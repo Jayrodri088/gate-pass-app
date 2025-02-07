@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:gate_pass/check_out.dart';
 import 'package:http/http.dart' as http;
 import 'package:gate_pass/pending_screens.dart';
 import 'package:gate_pass/rejected_screen.dart';
@@ -172,7 +173,7 @@ class _ApprovedScreenState extends State<ApprovedScreen> {
     );
   }
 
-  Widget _buildVisitorCard(Map<String, dynamic> visitor) {
+    Widget _buildVisitorCard(Map<String, dynamic> visitor) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Container(
@@ -187,11 +188,22 @@ class _ApprovedScreenState extends State<ApprovedScreen> {
             children: [
               Row(
                 children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundImage: visitor['selfie_path'] != null
-                        ? NetworkImage("http://10.10.2.34/gate-backend/${visitor['selfie_path']}".replaceFirst('./', ''))
-                        : const AssetImage('assets/img_1.png') as ImageProvider,
+                  GestureDetector(
+                    onTap: () {
+                      // Navigate to a new screen with visitor details
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CheckOutScreen(idnumber: visitor['id_number']),
+                        ),
+                      );
+                    },
+                    child: CircleAvatar(
+                      radius: 20,
+                      backgroundImage: visitor['selfie_path'] != null
+                          ? NetworkImage("http://10.10.2.34/gate-backend/${visitor['selfie_path']}".replaceFirst('./', ''))
+                          : const AssetImage('assets/img_1.png') as ImageProvider,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -223,6 +235,7 @@ class _ApprovedScreenState extends State<ApprovedScreen> {
       ),
     );
   }
+
 
   Widget _buildDateAndTimeRow(Map<String, dynamic> visitor) {
     return Container(
